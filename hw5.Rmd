@@ -9,22 +9,51 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+Part 1
+```{r}
+if (file.exists("alcohol.rds")) {
+  data <- readRDS("alcohol.rds")
+} else {
+  url <- "https://xdaiisu.github.io/ds202materials/data/ames.csv"
+  data <- readr::read_csv(url)
+  saveRDS(data, file="alcohol.rds")
+} 
 ```
 
-## Including Plots
+Part 2 Data Cleaning
+```{r}
+library(tidyr)
+library(lubridate)
 
-You can also embed plots, for example:
+# Extract longitude and latitude from Store Location
+data <- extract(data, `Store Location`, c("Latitude", "Longitude"), "\\(([^,]+),([^)]+)\\)")
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+# Change type for certain columns
+data$`Vendor Number` = as.numeric(data$`Vendor Number`)
+data$Latitude = as.numeric(data$Latitude)
+data$Longitude = as.numeric(data$Longitude)
+data$Date = mdy(data$Date)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+Part 3 First Overview
+```{r}
+library(ggplot2)
+library(dplyr)
+
+# Plot store locations
+ggplot(data, aes(x=Longitude, y=Latitude)) + geom_point()
+
+# Gallons sold per category
+d1 <- data %>%
+  group_by(`Category Name`) %>%
+  summarise(
+    volume = sum(`Volume Sold (Gallons)`)
+  )
+drop_na(d1)
+
+ggplot(d1, aes(x=`Category Name`, y=volume)) + 
+  geom_point() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
